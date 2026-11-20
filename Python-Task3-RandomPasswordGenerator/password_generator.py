@@ -1,111 +1,236 @@
 
+import tkinter as tk
+from tkinter import messagebox
 import secrets
 import string
 
 
 def generate_password(length, selected_types):
     characters = ""
-
-    # Character pools
-    if "1" in selected_types:
-        characters += string.ascii_uppercase
-
-    if "2" in selected_types:
-        characters += string.ascii_lowercase
-
-    if "3" in selected_types:
-        characters += string.digits
-
-    if "4" in selected_types:
-        characters += string.punctuation
-
-    # Ensure at least one character from every selected type
     password = []
 
-    if "1" in selected_types:
-        password.append(secrets.choice(string.ascii_uppercase))
+    pools = {
+        "uppercase": string.ascii_uppercase,
+        "lowercase": string.ascii_lowercase,
+        "numbers": string.digits,
+        "symbols": string.punctuation
+    }
 
-    if "2" in selected_types:
-        password.append(secrets.choice(string.ascii_lowercase))
+    for name, pool in pools.items():
+        if name in selected_types:
+            characters += pool
+            password.append(secrets.choice(pool))
 
-    if "3" in selected_types:
-        password.append(secrets.choice(string.digits))
-
-    if "4" in selected_types:
-        password.append(secrets.choice(string.punctuation))
-
-    # Fill remaining positions
     for _ in range(length - len(password)):
         password.append(secrets.choice(characters))
 
-    # Shuffle password characters securely
     secrets.SystemRandom().shuffle(password)
-
     return "".join(password)
 
 
-def main():
-    print("=" * 40)
-    print("       RANDOM PASSWORD GENERATOR")
-    print("=" * 40)
+def create_password():
+    try:
+        length = int(length_entry.get())
 
-    while True:
-        try:
-            length = int(input("\nEnter password length (minimum 8): "))
+        if length < 8:
+            messagebox.showwarning(
+                "Invalid Length",
+                "Password length must be at least 8."
+            )
+            return
 
-            if length < 8:
-                print("Error: Password length must be at least 8.")
-                continue
+        if length > 128:
+            messagebox.showwarning(
+                "Invalid Length",
+                "Maximum password length is 128."
+            )
+            return
 
-            break
-
-        except ValueError:
-            print("Error: Please enter a valid number.")
-
-    print("\nSelect character types:")
-    print("1. Uppercase Letters (A-Z)")
-    print("2. Lowercase Letters (a-z)")
-    print("3. Numbers (0-9)")
-    print("4. Symbols (!@#$...)")
-
-    while True:
-        choices = input(
-            "\nEnter choices separated by commas (e.g. 1,2,3): "
+    except ValueError:
+        messagebox.showerror(
+            "Invalid Input",
+            "Please enter a valid number."
         )
+        return
 
-        selected_types = set(
-            choice.strip() for choice in choices.split(",")
+    selected = [
+        name for name, variable in options.items()
+        if variable.get()
+    ]
+
+    if len(selected) < 2:
+        messagebox.showwarning(
+            "Selection Required",
+            "Select at least 2 character types."
         )
+        return
 
-        valid_types = {"1", "2", "3", "4"}
+    password = generate_password(length, selected)
 
-        if not selected_types.issubset(valid_types):
-            print("Error: Please select only options 1, 2, 3, or 4.")
-            continue
-
-        if len(selected_types) < 2:
-            print("Error: Select at least 2 character types.")
-            continue
-
-        break
-
-    while True:
-        password = generate_password(length, selected_types)
-
-        print("\n" + "=" * 40)
-        print("YOUR GENERATED PASSWORD")
-        print("=" * 40)
-        print(password)
-        print("=" * 40)
-
-        regenerate = input(
-            "\nGenerate another password? (yes/no): "
-        ).strip().lower()
-
-        if regenerate not in ("yes", "y"):
-            print("\nThank you for using Random Password Generator!")
-            break
+    password_entry.config(show="")
+    password_entry.delete(0, tk.END)
+    password_entry.insert(0, password)
 
 
-if __name__ == "__main__":
-    main()
+def copy_password():
+    password = password_entry.get()
+
+    if not password:
+        messagebox.showwarning(
+            "No Password",
+            "Generate a password first."
+        )
+        return
+
+    root.clipboard_clear()
+    root.clipboard_append(password)
+    root.update()
+    messagebox.showinfo("Copied", "Password copied to clipboard!")
+
+
+def toggle_password():
+    if password_entry.cget("show") == "*":
+        password_entry.config(show="")
+        show_button.config(text="Hide")
+    else:
+        password_entry.config(show="*")
+        show_button.config(text="Show")
+
+
+# Main Window
+root = tk.Tk()
+root.title("Random Password Generator")
+root.geometry("480x570")
+root.resizable(False, False)
+root.configure(bg="#14243B")
+
+title = tk.Label(
+    root,
+    text="PASSWORD GENERATOR",
+    font=("Arial", 20, "bold"),
+    bg="#14243B",
+    fg="white"
+)
+title.pack(pady=(30, 8))
+
+subtitle = tk.Label(
+    root,
+    text="Create a secure random password",
+    font=("Arial", 10),
+    bg="#14243B",
+    fg="#CBD5E1"
+)
+subtitle.pack(pady=5)
+
+# Password Length
+tk.Label(
+    root,
+    text="Password Length (8-128)",
+    font=("Arial", 11, "bold"),
+    bg="#14243B",
+    fg="white"
+).pack(pady=(25, 8))
+
+length_entry = tk.Entry(
+    root,
+    font=("Arial", 13),
+    justify="center",
+    width=12
+)
+length_entry.pack(ipady=6)
+length_entry.insert(0, "16")
+
+# Character Options
+tk.Label(
+    root,
+    text="Select Character Types",
+    font=("Arial", 11, "bold"),
+    bg="#14243B",
+    fg="white"
+).pack(pady=(25, 10))
+
+options_frame = tk.Frame(root, bg="#14243B")
+options_frame.pack()
+
+options = {}
+
+choices = [
+    ("uppercase", "Uppercase (A-Z)"),
+    ("lowercase", "Lowercase (a-z)"),
+    ("numbers", "Numbers (0-9)"),
+    ("symbols", "Symbols (!@#$)")
+]
+
+for name, label in choices:
+    variable = tk.BooleanVar(value=True)
+    options[name] = variable
+
+    tk.Checkbutton(
+        options_frame,
+        text=label,
+        variable=variable,
+        font=("Arial", 10),
+        bg="#14243B",
+        fg="white",
+        selectcolor="#263B55",
+        activebackground="#14243B",
+        activeforeground="white"
+    ).pack(anchor="w", pady=3)
+
+# Generate Button
+tk.Button(
+    root,
+    text="GENERATE PASSWORD",
+    font=("Arial", 11, "bold"),
+    bg="#2563EB",
+    fg="white",
+    activebackground="#1D4ED8",
+    activeforeground="white",
+    cursor="hand2",
+    command=create_password
+).pack(pady=22, ipadx=20, ipady=8)
+
+# Password Output
+password_entry = tk.Entry(
+    root,
+    font=("Consolas", 12),
+    justify="center",
+    width=34,
+    show="*"
+)
+password_entry.pack(ipady=8)
+
+# Show / Hide
+show_button = tk.Button(
+    root,
+    text="Show",
+    command=toggle_password,
+    bg="#334155",
+    fg="white",
+    cursor="hand2"
+)
+show_button.pack(pady=7)
+
+# Copy Button
+tk.Button(
+    root,
+    text="COPY PASSWORD",
+    font=("Arial", 10, "bold"),
+    bg="#16A34A",
+    fg="white",
+    activebackground="#15803D",
+    activeforeground="white",
+    cursor="hand2",
+    command=copy_password
+).pack(pady=8, ipadx=15, ipady=6)
+
+footer = tk.Label(
+    root,
+    text="Powered by Python secrets module",
+    font=("Arial", 9),
+    bg="#14243B",
+    fg="#94A3B8"
+)
+footer.pack(side="bottom", pady=15)
+
+root.mainloop()
